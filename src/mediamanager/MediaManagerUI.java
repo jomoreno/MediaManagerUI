@@ -1294,7 +1294,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
     
     private void createOkMessage(String message)
     {
-        Image imgOk = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Ok2.png"));
+        Image imgOk = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/ok2.png"));
         ImageIcon icon = new ImageIcon(imgOk.getScaledInstance(32, 32, Image.SCALE_SMOOTH));
         JOptionPane.showMessageDialog(this,message,"Message",JOptionPane.INFORMATION_MESSAGE,icon);
     }

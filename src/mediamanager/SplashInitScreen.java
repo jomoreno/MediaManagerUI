@@ -77,12 +77,15 @@ public class SplashInitScreen {
         dialog.setUndecorated(true);
         URL resource = mediamanager.imgs.posters.ReferencePosterClass.getPosterURL();
         Image img = Toolkit.getDefaultToolkit().createImage(resource);
-        JLabel background = new JLabel(new ImageIcon(img));
+        
+        ImageIcon icon = new ImageIcon(img.getScaledInstance(-1, 600, Image.SCALE_SMOOTH));
+        
+        JLabel background = new JLabel(icon);
         background.setLayout(new BorderLayout());
         dialog.add(background);
         JLabel text = new JLabel("Loading, please wait...");
         text.setForeground(Color.WHITE);
-        text.setFont(new Font("Verdana", Font.BOLD, 12));
+        text.setFont(new Font("Verdana", Font.BOLD, 16));
         text.setBorder(BorderFactory.createEmptyBorder(100, 50, 100, 50));
         background.add(text);
         progress = new JProgressBar();
