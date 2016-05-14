@@ -39,7 +39,7 @@ public class DatabaseManager {
         try {
             conn = DataBaseConnection.getConnection();
             String moviesTable = mediamanager.config.ConfigurationReader.geTableName(mediaType);
-            String query = "select NAME,TYPE,YEAR from " + moviesTable;
+            String query = "select NAME,TYPE,YEAR,DESCRIPTION from " + moviesTable;
             ResultSet results = DatabaseAccess.getResultSet(conn, query);
             
             while(results.next())
@@ -48,6 +48,7 @@ public class DatabaseManager {
                 m.setName(results.getString("NAME"));
                 m.setType(results.getString("TYPE"));
                 m.setYear((int)results.getShort("YEAR"));
+                m.setDescription(results.getString("DESCRIPTION"));
                 movies.add(m);
             }
             
@@ -78,7 +79,7 @@ public class DatabaseManager {
         try {
             conn = DataBaseConnection.getConnection();
             String seriesTable = mediamanager.config.ConfigurationReader.geTableName(mediaType);
-            String query = "select NAME,TYPE,YEAR from " + seriesTable;
+            String query = "select NAME,TYPE,YEAR,DESCRIPTION from " + seriesTable;
             ResultSet results = DatabaseAccess.getResultSet(conn, query);
             
             while(results.next())
@@ -87,6 +88,7 @@ public class DatabaseManager {
                 s.setName(results.getString("NAME"));
                 s.setType(results.getString("TYPE"));
                 s.setYear((int)results.getShort("YEAR"));
+                s.setDescription(results.getString("DESCRIPTION"));
                 series.add(s);
             }
         } catch (InstantiationException | IllegalAccessException | SQLException ex) {
@@ -113,7 +115,7 @@ public class DatabaseManager {
         try {
             conn = DataBaseConnection.getConnection();
             String animeTable = mediamanager.config.ConfigurationReader.geTableName(mediaType);
-            String query = "select NAME,TYPE,YEAR from " + animeTable;
+            String query = "select NAME,TYPE,YEAR,DESCRIPTION from " + animeTable;
             ResultSet results = DatabaseAccess.getResultSet(conn, query);
             
             while(results.next())
@@ -122,6 +124,7 @@ public class DatabaseManager {
                 s.setName(results.getString("NAME"));
                 s.setType(results.getString("TYPE"));
                 s.setYear((int)results.getShort("YEAR"));
+                s.setDescription(results.getString("DESCRIPTION"));
                 series.add(s);
             }
         } catch (InstantiationException | IllegalAccessException | SQLException ex) {
@@ -148,7 +151,7 @@ public class DatabaseManager {
         try {
             conn = DataBaseConnection.getConnection();
             String animeTable = mediamanager.config.ConfigurationReader.geTableName(mediaType);
-            String query = "select NAME,TYPE,YEAR from " + animeTable;
+            String query = "select NAME,TYPE,YEAR,DESCRIPTION from " + animeTable;
             ResultSet results = DatabaseAccess.getResultSet(conn, query);
             
             while(results.next())
@@ -157,6 +160,7 @@ public class DatabaseManager {
                 g.setName(results.getString("NAME"));
                 g.setType(results.getString("TYPE"));
                 g.setYear((int)results.getShort("YEAR"));
+                g.setDescription(results.getString("DESCRIPTION"));
                 games.add(g);
             }
         } catch (InstantiationException | IllegalAccessException | SQLException ex) {

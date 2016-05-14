@@ -67,6 +67,7 @@ import mediamanager.bl.MediaManager;
 import mediamanager.gui.BackgroundMenuBar;
 import mediamanager.gui.InternalGUICreator;
 import static mediamanager.gui.InternalGUICreator.TransparentRender;
+import mediamanager.gui.MediaExportUI;
 import mediamanager.gui.MediaImportUI;
 import mediamanager.gui.ProgressBarFrame;
 import mediamanager.gui.StatusBar;
@@ -177,8 +178,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _importInformation.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
-                clearInformation();
-                _searchTree.clearSelection();
+                showImportOptions();
             }
         });
         _importInformation.setEnabled(true);
@@ -189,8 +189,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _exportInformation.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
-                clearInformation();
-                _searchTree.clearSelection();
+               showExportOptions();
             }
         });
         _exportInformation.setEnabled(true);
@@ -645,7 +644,9 @@ public class MediaManagerUI extends javax.swing.JFrame {
     
     private void showExportOptions()
     {
-        
+        Image export = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/export.png"));
+        Image folderSearch = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/examples.png"));
+        MediaExportUI.getInstance(this,export,folderSearch);
     }
     
     private void createSearchDialogWindow()
@@ -657,13 +658,14 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _dialog.setSize(new Dimension(300, 500));
         _dialog.setLocationRelativeTo(_defaultFrame);
         _dialog.setModal(true);
+        _dialog.setResizable(false);
 
         JPanel panel = new JPanel();
         panel.setLayout(null);
 
         JLabel labelTitle = new JLabel("Search current media : " + selectedMedia);
-        labelTitle.setBounds(10, 5, 150, 20);
-        labelTitle.setSize(150, 20);
+        labelTitle.setBounds(10, 5, 260, 20);
+        labelTitle.setSize(260, 20);
         labelTitle.setVisible(true);
         panel.add(labelTitle);
         

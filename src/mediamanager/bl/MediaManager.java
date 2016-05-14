@@ -279,6 +279,137 @@ public class MediaManager {
         return years;
     }
     
+    public static String getExportHTMLMedia(String mediaType)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<Media> mediaList = getGenericMediaList(mediaType);
+        
+        sb.append("<html>");
+        sb.append("<body bgcolor='gray'>");
+        sb.append("<h2 style='color:black;'>").append(mediaType).append(" List</h2>");
+        sb.append("<table style='width:1200px'>");
+        sb.append("<tr style='vertical-align: text-top; color:white; font:14px Arial; background-color:#A0A0A0;'><td><strong>Name</strong></td><td><strong>Description</strong></td><td><strong>Type</strong></td><td><strong>Year</strong></td></tr>");
+        
+        for(Media m : mediaList)
+        {
+            sb.append("<tr style='vertical-align: text-top; color:white; font:14px Arial; background-color:#A0A0A0;'><td valign=\"top\">").append(m.getName()).append("</td><td valign=\"top\">").
+                          append(m.getDescription()).append("</td><td valign=\"top\">").
+                    append(m.getType()).append("</td><td valign=\"top\">").append(m.getYear()).append("</td></tr>");
+        }
+        
+        sb.append("</table>");
+        sb.append("</body>");
+        sb.append("</html>");
+        
+        return sb.toString();
+    }
+    
+    public static String getExportTabMedia(String mediaType)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<Media> mediaList = getGenericMediaList(mediaType);
+        for(Media m : mediaList)
+        {
+            sb.append(m.getName());
+            sb.append("|");
+            sb.append(m.getYear());
+            sb.append("|");
+            sb.append(m.getType());
+            sb.append("|");
+            sb.append(m.getDescription());
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+    
+    public static String getExportHTMLMediaExample(String mediaType)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<Media> mediaList = getGenericMediaList(mediaType);
+        
+        sb.append("<html>");
+        sb.append("<body bgcolor='gray'>");
+        sb.append("<h2>").append(mediaType).append(" List</h2>");
+        sb.append("<table style='width:800px;'>");
+        sb.append("<tr><td><strong>Name</strong></td><td><strong>Description</strong></td><td><strong>Type</strong></td><td><strong>Year</strong></td></tr>");
+        
+        for(int i=0;i<10;i++)
+        {
+            sb.append("<tr><td valign=\"top\">").append(mediaList.get(i).getName()).append("</td><td valign=\"top\">").
+                          append(mediaList.get(i).getDescription()).append("</td><td valign=\"top\">").
+                    append(mediaList.get(i).getType()).append("</td><td valign=\"top\">").append(mediaList.get(i).getYear()).append("</td></tr>");
+        }
+        
+        sb.append("</table>");
+        sb.append("</body>");
+        sb.append("</html>");
+        
+        return sb.toString();
+    }
+    
+    public static String getExportTabMediaExample(String mediaType)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<Media> mediaList = getGenericMediaList(mediaType);
+        for(int i=0;i<10;i++)
+        {
+            sb.append(mediaList.get(i).getName());
+            sb.append("|");
+            sb.append(mediaList.get(i).getYear());
+            sb.append("|");
+            sb.append(mediaList.get(i).getType());
+            sb.append("|");
+            sb.append(mediaList.get(i).getDescription());
+            sb.append(System.getProperty("line.separator"));
+        }
+        return sb.toString();
+    }
+    
+    private static List<Media> getGenericMediaList(String mediaType)
+    {
+        List<Media> genericList = new ArrayList<>();
+        switch (mediaType)
+         {
+             case "Movies": {
+                 List<Movie> movieList = DatabaseManager.getInstance().GetAllMovies(mediaType);
+                 for(Movie m : movieList)
+                 {
+                     genericList.add(m);
+                 }
+             } break;
+             case "Anime Series":{
+                 List<AnimeSerie> animeList = DatabaseManager.getInstance().GetAllAnimeSeries(mediaType);
+                 for(AnimeSerie an : animeList)
+                 {
+                     genericList.add(an);
+                 }
+             } break;
+             case "TV Series":{
+                 List<TVSerie> tvList = DatabaseManager.getInstance().GetAllTVSeries(mediaType);
+                 for(TVSerie tv : tvList)
+                 {
+                     genericList.add(tv);
+                 }
+             } break;
+             case "Games":{
+                  List<Game> gameList = DatabaseManager.getInstance().GetAllGames(mediaType);
+                  for(Game gm : gameList)
+                  {
+                     genericList.add(gm);
+                  }
+             } break;
+             default: {
+                 // bring movies.
+                  List<Movie> movieList = DatabaseManager.getInstance().GetAllMovies(mediaType);
+                  for(Movie m : movieList)
+                  {
+                     genericList.add(m);
+                  }
+             } break;
+         }
+        return genericList;
+    }
+    
     public static Media getMovieInformation(String mediaType,String name)
     {
         return DatabaseManager.getInstance().getAllInformation(mediaType, name);

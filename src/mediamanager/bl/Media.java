@@ -53,11 +53,11 @@ public class Media implements IMedia, Iterable<Media> {
     @Override
     public String getName(){ return name;}
     @Override
-    public String getDescription() { return description;}
+    public String getDescription() { return description == null ? "" : description;}
     @Override
-    public String getType(){ return type;}
+    public String getType(){ return type == null ? "" : type;}
     @Override
-    public int getYear(){return year;}
+    public int getYear(){return year == 0 ? 1900 : year;}
     @Override
     public String getExtension(){ return extension;}
     @Override

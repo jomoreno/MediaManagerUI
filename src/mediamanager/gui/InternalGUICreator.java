@@ -344,6 +344,21 @@ public class InternalGUICreator {
         return fileChooser;
     }
     
+    public static JFileChooser createFileHTMLChooser()
+    {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.addChoosableFileFilter(new FileFilterHTML());
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        return fileChooser;
+    }
+    
+    public static JFileChooser createFolderChooser()
+    {
+        JFileChooser folderChooser = new JFileChooser();
+        folderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        return folderChooser;
+    }
+    
     public static JFileChooser createFileVideoChooser()
     {
         JFileChooser fileChooser = new JFileChooser();
