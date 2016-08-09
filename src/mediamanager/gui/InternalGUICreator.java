@@ -14,7 +14,12 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.WritableRaster;
+import java.io.File;
 import java.net.URL;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -82,7 +87,7 @@ public class InternalGUICreator {
         URL imageURL = mediamanager.imgs.icons.GetURLIconReference.getIconURL(iconName);
         JButton button = new JButton();
         button.setToolTipText(toolTipText);
-        button.setIcon(getStretchScaledImage(new ImageIcon(imageURL, altText),20,20));
+        button.setIcon(getStretchScaledImage(new ImageIcon(imageURL, altText),20,20,false));
         button.setLocation(x, y);
         return button;
     }
@@ -367,7 +372,35 @@ public class InternalGUICreator {
         return fileChooser;
     }
     
-    public static ImageIcon getStretchScaledImage(ImageIcon image,int maxWidth,int maxHeight)
+    public static boolean validateGIFImage(byte[] image)
+    {
+        // GIF format	.gif	First 4 HEX Values 47 49 46 38
+        return (image[0] == 71 && image[1] == 73 && image[2] == 70 && image[3] == 56);
+    }
+    
+    public static boolean validateGIFImageFromFile(File file)
+    {
+        try
+        {
+            BufferedImage bufferedImage = ImageIO.read(file);
+            // get DataBufferBytes from Raster
+            WritableRaster raster = bufferedImage .getRaster();
+            DataBufferByte data   = (DataBufferByte) raster.getDataBuffer(); 
+            byte[] imageBytes = data.getData();
+            for(int i=0; i<4; i++)
+            {
+                System.out.println(imageBytes[i]);
+            }
+            return validateGIFImage(imageBytes);
+        }
+        catch(Exception ex)
+        {
+            return false;
+        }    
+    }
+    
+    
+    public static ImageIcon getStretchScaledImage(ImageIcon image,int maxWidth,int maxHeight, boolean isGIF)
     {
         System.out.println("Width "+ image.getIconWidth() + " Height "+ image.getIconHeight());
         if(image.getIconWidth() > maxWidth && image.getIconHeight() > maxHeight)
@@ -380,33 +413,33 @@ public class InternalGUICreator {
                 if(percentage > 90)
                 {
                     System.out.println("Found > 90");
-                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
                 else if(percentage > 80)
                 {
                     System.out.println("Found > 80");
-                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
                 else if(percentage > 70)
                 {
                     System.out.println("Found > 70");
-                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth-100, -1,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth-100, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
                 else if(percentage > 60)
                 {
                     System.out.println("Found > 60");
-                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth-50, -1,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth-50, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
                 else
                 {
                     System.out.println("Found < 70");
-                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
             }
             else
             {
                 System.out.println("Found Height greater than width");
-                return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
             }
         }
         else
@@ -427,29 +460,29 @@ public class InternalGUICreator {
                         float percentage = (height / width) * 100;
                         if(percentage > 90)
                         {
-                            return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                            return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                         }
                         else if(percentage > 80)
                         {
-                            return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                            return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                         }
                         else if(percentage > 70)
                         {
-                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth-70, -1,Image.SCALE_SMOOTH));
+                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth-70, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                         }
                         else if(percentage > 60)
                         {
-                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth-40, -1,Image.SCALE_SMOOTH));
+                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth-40, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                         }
                         else
                         {
-                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1,Image.SCALE_SMOOTH));
+                            return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                         }
                     }
                 }
                 else
                 {
-                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(maxWidth, -1, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
             }
             else
@@ -461,11 +494,11 @@ public class InternalGUICreator {
                         return image;
                     }
                     else
-                        return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                        return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
                 else
                 {
-                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight,Image.SCALE_SMOOTH));
+                    return new ImageIcon(image.getImage().getScaledInstance(-1, maxHeight, isGIF ? Image.SCALE_DEFAULT : Image.SCALE_SMOOTH));
                 }
             }
         }

@@ -838,16 +838,19 @@ public class MediaManagerUI extends javax.swing.JFrame {
                 try   
                 {  
                     Image image = ImageIO.read(file); 
+                    
+                    boolean isGIF = InternalGUICreator.validateGIFImageFromFile(file);
+
                     switch(type)
                     {
                         case IMAGE1: {
-                            setImageInUpperImagePanel(image);
+                            setImageInUpperImagePanel(image,isGIF);
                         } break;
                         case IMAGE2: {
-                            seImageInCenterLeftImagePanel(image);
+                            seImageInCenterLeftImagePanel(image,isGIF);
                         } break;
                         case IMAGE3: {
-                            setImageInCenterRightImagePanel(image);
+                            setImageInCenterRightImagePanel(image,isGIF);
                         } break;
                         default:{}break;
                     }  
@@ -869,10 +872,10 @@ public class MediaManagerUI extends javax.swing.JFrame {
         }
     }
     
-    private void setImageInCenterRightImagePanel(Image image)
+    private void setImageInCenterRightImagePanel(Image image,boolean isGIF)
     {
         ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310);
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
         JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
         _image3Panel.removeAll();
         _image3Panel.repaint();
@@ -880,10 +883,10 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _image3Panel.update(_image3Panel.getGraphics());
     }
     
-    private void seImageInCenterLeftImagePanel(Image image)
+    private void seImageInCenterLeftImagePanel(Image image,boolean isGIF)
     {
         ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310);
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
         JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
         _image2Panel.removeAll();
         _image2Panel.repaint();
@@ -891,10 +894,10 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _image2Panel.update(_image2Panel.getGraphics());
     }
     
-    private void setImageInUpperImagePanel(Image image)
+    private void setImageInUpperImagePanel(Image image,boolean isGIF)
     {
         ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310);
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
         JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
         _image1Panel.removeAll();
         _image1Panel.repaint();
@@ -1105,7 +1108,8 @@ public class MediaManagerUI extends javax.swing.JFrame {
                 {
                     // read bytes as stream
                     Image img = Toolkit.getDefaultToolkit().createImage(image1);
-                    setImageInUpperImagePanel(img);
+                    
+                    setImageInUpperImagePanel(img,InternalGUICreator.validateGIFImage(image1));
                 }
             }
             else
@@ -1117,7 +1121,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
                     {
                         // read bytes as stream
                         Image img = Toolkit.getDefaultToolkit().createImage(image2);
-                        seImageInCenterLeftImagePanel(img);
+                        seImageInCenterLeftImagePanel(img,InternalGUICreator.validateGIFImage(image2));
                     }
                 }
                 else
@@ -1127,7 +1131,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
                     {
                         // read bytes as stream
                         Image img = Toolkit.getDefaultToolkit().createImage(image3);
-                        setImageInCenterRightImagePanel(img);
+                        setImageInCenterRightImagePanel(img,InternalGUICreator.validateGIFImage(image3));
                     }
                 }
             } 
