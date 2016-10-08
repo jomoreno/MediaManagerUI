@@ -7,14 +7,14 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{7F99D2C0-6EF4-473D-92DA-D91C7AD63AA2}
 AppName=Media Manager UI
-AppVersion=1.1
-;AppVerName=Media Manager UI 1.1
+AppVersion=1.2
+;AppVerName=Media Manager UI 1.2
 AppPublisher=JMS
 DefaultDirName={pf}\Media Manager UI
 DisableProgramGroupPage=yes
 OutputDir=C:\Users\Tekken\Documents\NetBeansProjects\MediaManager\installer
 OutputBaseFilename=setup
-SetupIconFile=C:\Users\Tekken\Downloads\Treetog-I-Video-File.ico
+SetupIconFile=C:\Users\Tekken\Documents\NetBeansProjects\MediaManager\installer\installerIcon.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -26,7 +26,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: "C:\Users\Tekken\Documents\NetBeansProjects\MediaManager\installer\MediaManagerUIInstaller.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Tekken\Documents\NetBeansProjects\MediaManager\installer\MediaManagerUI.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\Tekken\Documents\NetBeansProjects\MediaManager\dist\lib\*"; DestDir: "{app}\lib\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

@@ -24,9 +24,12 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -55,9 +58,13 @@ import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import mediamanager.bl.ElementTypes;
@@ -117,6 +124,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
     private JLabel _exitApp;
     private JLabel _importInformation;
     private JLabel _exportInformation;
+    private JLabel _collapseTree;
     
     private JFileChooser _fileChooser;
     
@@ -129,9 +137,14 @@ public class MediaManagerUI extends javax.swing.JFrame {
     private JDialog _dialog;
     private JTextField _searchField;    
     private JList _tmpList;
+    private JScrollPane _scrollSearchResult;
     
     private JButton _btnSearch;
     private StatusBar _statusBar;
+    
+    private DefaultMutableTreeNode selectedNode;
+    
+    private static final String[] SPECIAL_CHARS = {"0","1","2","3","4","5","6","7","8","9","."};
     
     private static MediaManagerUI managerUI = null;
     
@@ -245,6 +258,19 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _searchTree.setCellRenderer(TransparentRender);
         _searchTree.setOpaque(true);
         setTreeListener(_searchTree);
+        
+        TreeWillExpandListener expandCollapseListener = new TreeWillExpandListener() {
+            @Override
+            public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
+                _collapseTree.setEnabled(true);
+            }
+
+            @Override
+            public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
+               _collapseTree.setEnabled(false);
+            }
+        };
+        _searchTree.addTreeWillExpandListener(expandCollapseListener);
        
         _searchTreeScrollPane = new JScrollPane(_searchTree);
         _searchTreeScrollPane.setLocation(5, 50);
@@ -254,7 +280,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
 
         _searchTree.setBounds(0, 0, 100, 500);
         _searchTree.setSize(100, 500);
-        
+
         _leftSearchPanel.add(_searchTreeScrollPane);
 
         
@@ -311,7 +337,6 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _addMediaInformation.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
-                
                 String mediaType = _searchTypeCbb.getSelectedItem().toString();
                 boolean hasData = (!_name.getText().trim().equals("") && !_description.getText().trim().equals("")); 
                 if(hasData)
@@ -336,13 +361,16 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _saveInformation.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
-                if(!_addMediaInformation.isEnabled())
+                if(_saveInformation.isEnabled())
                 {
-                    addBasicInformationOfMedia();
-                }
-                else
-                {
-                    updateBasicInformationOfMedia();
+                    if(!_addMediaInformation.isEnabled())
+                    {
+                        addBasicInformationOfMedia();
+                    }
+                    else
+                    {
+                        updateBasicInformationOfMedia();
+                    }
                 }
             }
         });
@@ -354,13 +382,16 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _deleteInformation.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
-                if(isLeafItemInTreeSelected())
+                if(_deleteInformation.isEnabled())
                 {
-                    int result = createConfirmationMessage("Do you really want to delete the selected item?");
-                    if(result == JOptionPane.OK_OPTION)
+                    if(isLeafItemInTreeSelected())
                     {
-                        deleteInformationOfMedia();
-                    }  
+                        int result = createConfirmationMessage("Do you really want to delete the selected item?");
+                        if(result == JOptionPane.OK_OPTION)
+                        {
+                            deleteInformationOfMedia();
+                        }  
+                    }
                 }
             }
         });
@@ -373,10 +404,13 @@ public class MediaManagerUI extends javax.swing.JFrame {
             @Override
             public void mouseClicked(MouseEvent me) {
                 try {
-                    Image imgPlay = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/play3.png"));
-                    if(getVideoInformation())
+                    if(_playVideo.isEnabled())
                     {
-                        mediamanager.player.VideoReproduction.playMediaVideoFile(imgPlay);
+                        Image imgPlay = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/play3.png"));
+                        if(getVideoInformation())
+                        {
+                            mediamanager.player.VideoReproduction.playMediaVideoFile(imgPlay);
+                        }
                     }
                 } catch (Exception ex) {
                     Logger.getLogger(MediaManagerUI.class.getName()).log(Level.SEVERE, null, ex);
@@ -386,6 +420,27 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _playVideo.setEnabled(false);
         _leftSearchPanel.add(_playVideo);
 
+        // _collapseTree
+        Image imgCollapse = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/collapse.png"));
+        _collapseTree = InternalGUICreator.createSizedImageOnLabel(348, 300,36,36, imgCollapse, 0.9f,"Collapse the tree to original state!");
+        _collapseTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent me) {
+                try {
+                    if(_collapseTree.isEnabled())
+                    {
+                        collapseAllTree(_searchTree);
+                        _searchTree.clearSelection();
+                        _collapseTree.setEnabled(false);
+                    }
+                } catch (Exception ex) {
+                    Logger.getLogger(MediaManagerUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+         _collapseTree.setEnabled(false);
+        _leftSearchPanel.add(_collapseTree);
+        
         // </editor-fold>
         
         // <editor-fold defaultstate="collapsed" desc="Upper Panel GUI">
@@ -536,7 +591,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
         _itemFileImport = new JMenuItem("File Import",
                          new ImageIcon(importImg));
         _itemFileImport.setAccelerator(KeyStroke.getKeyStroke(
-            KeyEvent.VK_I, ActionEvent.ALT_MASK));
+            KeyEvent.VK_I, ActionEvent.CTRL_MASK));
         _itemFileImport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -549,7 +604,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
          _itemFileExport = new JMenuItem("File Export",
                          new ImageIcon(exportImg));
         _itemFileExport.setAccelerator(KeyStroke.getKeyStroke(
-            KeyEvent.VK_E, ActionEvent.ALT_MASK));
+            KeyEvent.VK_E, ActionEvent.CTRL_MASK));
         _itemFileExport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -571,14 +626,14 @@ public class MediaManagerUI extends javax.swing.JFrame {
         
         _menuOptions = new JMenu("Options");
         
-        Image pickColorImg = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/settings_gear.png"));
-        _itemOptionSetBackgroundColor = new JMenuItem("Option 1", new ImageIcon(pickColorImg));
+        Image pickColorImg = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/find.png"));
+        _itemOptionSetBackgroundColor = new JMenuItem("Search Media", new ImageIcon(pickColorImg));
         _itemOptionSetBackgroundColor.setAccelerator(KeyStroke.getKeyStroke(
-            KeyEvent.VK_P, ActionEvent.ALT_MASK));
+            KeyEvent.VK_S, ActionEvent.CTRL_MASK));
         _itemOptionSetBackgroundColor.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                
+                 createSearchDialogWindow();
             }
         });
         _menuOptions.add(_itemOptionSetBackgroundColor); 
@@ -590,7 +645,7 @@ public class MediaManagerUI extends javax.swing.JFrame {
         Image helpImg = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Information.png"));
         _itemHelpVersion = new JMenuItem("About", new ImageIcon(helpImg));
         _itemHelpVersion.setAccelerator(KeyStroke.getKeyStroke(
-            KeyEvent.VK_A, ActionEvent.ALT_MASK));
+            KeyEvent.VK_A, ActionEvent.CTRL_MASK));
         _itemHelpVersion.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -613,10 +668,70 @@ public class MediaManagerUI extends javax.swing.JFrame {
         
     }
     
-    private String getTreeCountMsg()
+    // <editor-fold defaultstate="collapsed" desc="Tree Methods">
+    
+    private void setTreeListener(JTree searchTree)
     {
-        return getNumberOfNodes(_searchTree.getModel()) + " elements were found under " + _searchTypeCbb.getSelectedItem().toString() + " list...";
+        searchTree.addTreeSelectionListener(new TreeSelectionListener(){
+            @Override
+            public void valueChanged(TreeSelectionEvent evt)
+            {
+                clearInformation();
+                
+                _saveInformation.setEnabled(false);
+                _playVideo.setEnabled(false);
+                _addVideo.setEnabled(false);
+                _cleanInformation.setEnabled(false);
+                _deleteInformation.setEnabled(false);
+                _collapseTree.setEnabled(false);
+                
+                String selectedValue = verifySelectionOnLeafNode();
+                if(selectedValue != null)
+                {
+                    String mediaTypeSelected = _searchTypeCbb.getSelectedItem().toString();
+                    _saveInformation.setEnabled(true);
+                    _playVideo.setEnabled(true);
+                    _addVideo.setEnabled(true);
+                    _cleanInformation.setEnabled(true);
+                    _deleteInformation.setEnabled(true);
+                    _collapseTree.setEnabled(true);
+                    setStatusBarMessage(selectedValue + " selected from " + mediaTypeSelected + " list...");   
+
+                    switch(mediaTypeSelected)
+                    {
+                        case "Movies":{
+                            Media media = MediaManager.getMovieInformation(mediaTypeSelected, selectedValue);
+                            printMediaInformation(media,"Movie");
+                        } break;
+                        case "Anime Series":{
+                            Media media = MediaManager.getAnimeSerieInformation(mediaTypeSelected, selectedValue);
+                            printMediaInformation(media,"Anime Serie");
+                        } break;
+                        case "TV Series":{
+                            Media media = MediaManager.getTVSerieInformation(mediaTypeSelected, selectedValue);
+                            printMediaInformation(media,"TV Serie");
+                        } break;
+                        case "Games":{
+                            Media media = MediaManager.getGameInformation(mediaTypeSelected, selectedValue);
+                            printMediaInformation(media,"Game");
+                        } break;
+                        default:{} break;
+                    }
+                }
+            }
+        });
     }
+    
+    private TreePath findObject(Object object) {
+        java.util.Enumeration nodes = ( (DefaultMutableTreeNode)_searchTree.getModel().getRoot()).preorderEnumeration();
+        while (nodes.hasMoreElements()) {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) nodes.nextElement();
+            if (node.getUserObject().toString().equals(object.toString())) {
+                return new TreePath(node.getPath());
+            }
+        }
+        return null;
+    } 
     
     private int getNumberOfNodes(TreeModel model)  
     {  
@@ -635,152 +750,229 @@ public class MediaManagerUI extends javax.swing.JFrame {
         return count;  
     }
     
-    private void showImportOptions()
-    {
-        Image search = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Search1.png"));
-        Image clear = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/edit-clear.png"));
-        MediaImportUI.getInstance(this,search,clear);
-    }
-    
-    private void showExportOptions()
-    {
-        Image export = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/export.png"));
-        Image folderSearch = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/examples.png"));
-        MediaExportUI.getInstance(this,export,folderSearch);
-    }
-    
-    private void createSearchDialogWindow()
-    {
-        String selectedMedia = _searchTypeCbb.getSelectedItem().toString();
-        
-        _dialog = new JDialog(_defaultFrame);
-        _dialog.setTitle("Search media...");
-        _dialog.setSize(new Dimension(300, 500));
-        _dialog.setLocationRelativeTo(_defaultFrame);
-        _dialog.setModal(true);
-        _dialog.setResizable(false);
-
-        JPanel panel = new JPanel();
-        panel.setLayout(null);
-
-        JLabel labelTitle = new JLabel("Search current media : " + selectedMedia);
-        labelTitle.setBounds(10, 5, 260, 20);
-        labelTitle.setSize(260, 20);
-        labelTitle.setVisible(true);
-        panel.add(labelTitle);
-        
-        _searchField = new JTextField();
-        _searchField.setBounds(10, 30, 265, 20);
-        _searchField.setVisible(true);
-        _searchField.addKeyListener(new KeyListener() {
-
-            @Override
-            public void keyTyped(KeyEvent e) {
-                
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                String searchCriteria = _searchField.getText();
-                searchMedia(searchCriteria);
-                _tmpList.repaint();
-                _dialog.repaint();
-            }
-        });
-        panel.add(_searchField);
-        
-        _tmpList = new JList();
-        _tmpList.setBounds(10, 55, 265, 370);
-        _tmpList.setVisible(true);
-        _tmpList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        _tmpList.addListSelectionListener(new ListSelectionListener() {
-            @Override 
-            public void valueChanged(ListSelectionEvent e) {
-                if(!_tmpList.isSelectionEmpty())
-                {
-                    _btnSearch.setEnabled(true);
-                }
-                else
-                {
-                    _btnSearch.setEnabled(false);
-                }
-            }
-        });
-        
-        MouseListener mouseListener = new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent mouseEvent) {
-              JList theList = (JList) mouseEvent.getSource();
-              if (mouseEvent.getClickCount() == 2) {
-                int index = theList.locationToIndex(mouseEvent.getPoint());
-                if (index >= 0) {
-                  Object o = theList.getModel().getElementAt(index);
-                  System.out.println("Double-clicked on: " + o.toString());
-                  TreePath path = findObject(o.toString());
-                  collapseAllTree(_searchTree);
-                  _searchTree.setSelectionPath(path);
-                  _searchTree.scrollPathToVisible(path);
-                  _dialog.dispose();
-                }
-              }
-        }
-        };
-        _tmpList.addMouseListener(mouseListener);
-        panel.add(_tmpList);
-        
-        _btnSearch = new JButton("Select");
-        _btnSearch.setBounds(195, 435, 80, 20);
-        _btnSearch.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                // select item from tree
-                if(!_tmpList.isSelectionEmpty())
-                {
-                    String nameSelected = _tmpList.getModel().getElementAt(_tmpList.getSelectedIndex()).toString();
-                    TreePath path = findObject(nameSelected);
-                    collapseAllTree(_searchTree);
-                    _searchTree.setSelectionPath(path);
-                    _searchTree.scrollPathToVisible(path);
-                    _dialog.dispose();
-                }
-            }
-        });
-        _btnSearch.setEnabled(false);
-        panel.add(_btnSearch);
-        
-        _dialog.add(panel);
-        _dialog.repaint();
-        _dialog.setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Search2.png")));
-        
-        _dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        _dialog.setVisible(true);
-        
-    }
-    
-    private TreePath findObject(Object object) {
-        java.util.Enumeration nodes = ( (DefaultMutableTreeNode)_searchTree.getModel().getRoot()).preorderEnumeration();
-        while (nodes.hasMoreElements()) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) nodes.nextElement();
-            if (node.getUserObject().toString().equals(object.toString())) {
-                return new TreePath(node.getPath());
-            }
-        }
-        return null;
-    } 
-    
     private void collapseAllTree(JTree tree)
     {
         int row = tree.getRowCount() - 1;
-        while (row >= 0) {
+        while (row >= 1) {
             tree.collapseRow(row);
             row--;
         } 
     }
+    
+    private String verifySelectionOnLeafNode()
+    {
+        TreePath path = _searchTree.getSelectionPath();
+        if (path != null)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            selectedNode = node;
+            if (node.isLeaf())
+            {
+                if(node.getParent().getParent() != null)
+                {
+                    return node.toString();
+                }
+                else return null;
+            }
+            else return null;
+        }
+        else return null;
+    }    
+    
+    private String getSelectedNode()
+    {
+        String name = "";
+        TreePath path = _searchTree.getSelectionPath();
+        if (path != null)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            name = node.toString();
+        }
+        return name;
+    }
+    
+    private boolean isNodeParentOfElement(DefaultMutableTreeNode node, String nameComparator)
+    {
+        return node != null && node.toString().startsWith(nameComparator.substring(0,1));
+    }
+    
+    private void insertInformationOnTree(String name)
+    {
+        // establish the initial letter of the name...
+        // the tree will be always be loaded...
+        // but might not be selected at all...
+        // so the selectedNode will tell us what is being selected
+        if(selectedNode != null && selectedNode.isLeaf())
+        {
+            // evaluate if parent is root or not
+            if(selectedNode.getParent().getParent() == null)
+            {
+                // this is an element/letter that doesn't have any elements on it...
+                // but parent is the root!
+                if(isNodeParentOfElement(selectedNode,name))
+                {
+                    DefaultMutableTreeNode parent = (DefaultMutableTreeNode)selectedNode;
+                    DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    int position = getPositionOfInsertion(parent,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, parent, position);
+                }
+                else
+                {
+                    // empty element/node selected... but is not the one where the element should go!
+                    DefaultMutableTreeNode parent = getNodeFromStartOfString(name);
+                    DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    int position = getPositionOfInsertion(parent,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, parent, position);
+                }
+            }
+            else
+            {
+                // this is a normal leaf, the parent should be the element...
+                // but we always need to check if the value being inserted will belog to this element or not
+                if(isNodeParentOfElement(selectedNode,name))
+                {
+                    DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultMutableTreeNode parent = (DefaultMutableTreeNode)selectedNode.getParent();
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    int position = getPositionOfInsertion(parent,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, parent, position);
+                }
+                else
+                {
+                    // normal leaf selected but the selected element is not were the new item should be inserted
+                     DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultMutableTreeNode parent = getNodeFromStartOfString(name);
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    int position = getPositionOfInsertion(parent,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, parent, position);
+                }
+            }
+        }
+        else
+        {
+            // selecting a letter in the tree, so that's the node 
+            // where we should insert the new child, but we need to check if it really should be where the element will be inserted or not
+            if(selectedNode != null)
+            {
+                if(isNodeParentOfElement(selectedNode,name))
+                {
+                    DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    int position = getPositionOfInsertion(selectedNode,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, selectedNode, position);
+                }
+                else
+                {
+                    // need to get the real node where to insert the information
+                    DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                    DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                    DefaultMutableTreeNode parentNode = getNodeFromStartOfString(name);
+                    int position = getPositionOfInsertion(parentNode,name);
+                    System.out.println("Position " + position);
+                    model.insertNodeInto(child, parentNode, position);
+                }
+            }
+            else
+            {
+                DefaultMutableTreeNode child = new DefaultMutableTreeNode(name);
+                DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                DefaultMutableTreeNode parentNode = getNodeFromStartOfString(name);
+                int position = getPositionOfInsertion(parentNode,name);
+                System.out.println("Position " + position);
+                model.insertNodeInto(child, parentNode, position);
+            }
+        }
+    }
+    
+    private DefaultMutableTreeNode getNodeFromStartOfString(String name)
+    {
+        String initialChar = name.substring(0,1);
+        if(Arrays.asList(SPECIAL_CHARS).contains(initialChar))
+        {
+            initialChar = "#";
+        }
+        TreePath path = findObject(initialChar);
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+        return node;
+    }
+    
+    private int getPositionOfInsertion(DefaultMutableTreeNode node, String nameComparator)
+    {
+        int position = 0;
+        System.out.println("Comparing the node " + node.toString() + " with the start of the nameComparator " + nameComparator.substring(0,1));
+        if(isNodeParentOfElement(node,nameComparator))
+        {
+            System.out.println("CORRECT NODE FOUND");
+            // the node selected is the one where we need to do the insertion
+            int totalNodeCounts = node.getChildCount();
+            for(int i=0;i<totalNodeCounts;i++)
+            {
+                String currentNodeName = node.getChildAt(i).toString();
+                System.out.println("Comparing " + currentNodeName + " with " + nameComparator);
+                System.out.println("Result " + currentNodeName.compareTo(nameComparator));
+                if(currentNodeName.compareTo(nameComparator) < 0)
+                {
+                    position = i;
+                }
+            }
+        }
+        else
+        {
+            // we need to find the right node where to insert the new child
+            DefaultMutableTreeNode parentNode = getNodeFromStartOfString(nameComparator);
+            System.out.println("Parent found "+parentNode.toString()+ " for element " + nameComparator);
+            int totalNodeCounts = parentNode.getChildCount();
+            for(int i=0;i<totalNodeCounts;i++)
+            {
+                String currentNodeName = parentNode.getChildAt(i).toString();
+                System.out.println("Comparing " + currentNodeName + " with " + nameComparator);
+                if(currentNodeName.compareTo(nameComparator) < 0)
+                {
+                    position = i;
+                }
+            }
+        }
+        return position;
+    }
+    
+    private void deleteInformationOnTree()
+    {
+        // we will delete only leafs that are not elements like letters
+        if(selectedNode.isLeaf())
+        {
+            if(selectedNode.getParent().getParent() == null)
+            {
+                // you irgnore this element nothing to do...
+            }
+            else
+            {
+                DefaultTreeModel model = (DefaultTreeModel)_searchTree.getModel();
+                model.removeNodeFromParent(selectedNode);
+            }
+        }
+    }    
+    
+    private boolean isLeafItemInTreeSelected()
+    {
+        TreePath path = _searchTree.getSelectionPath();
+        if (path != null)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            return node.isLeaf();
+        }
+        return false;
+    }    
+    
+    // </editor-fold>
+    
+    // <editor-fold defaultstate="collapsed" desc="Update, Delete and Insertion Methods">
     
     private void updateVideo()
     {
@@ -872,44 +1064,270 @@ public class MediaManagerUI extends javax.swing.JFrame {
         }
     }
     
-    private void setImageInCenterRightImagePanel(Image image,boolean isGIF)
+    private void updateBasicInformationOfMedia()
     {
-        ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
-        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
-        _image3Panel.removeAll();
-        _image3Panel.repaint();
-        _image3Panel.add(imageLabeled);
-        _image3Panel.update(_image3Panel.getGraphics());
+        String name = _name.getText();
+        String description = _description.getText();
+        
+        String type = _type.getSelectedItem() != null ? _type.getSelectedItem().toString() : "";
+        int year = _year.getSelectedItem() != null ? Integer.valueOf(_year.getSelectedItem().toString()) : 1901;
+        
+        String mediaType = _searchTypeCbb.getSelectedItem().toString();
+        String previousName = name;
+        
+        TreePath path = _searchTree.getSelectionPath();
+        if (path != null)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            previousName = node.toString();
+            node.setUserObject(name);
+        }
+        else
+        {
+            createErrorMessage("No media was selected to made an update.");
+            return;
+        }
+        
+        if(MediaManager.updateMediaInformation(name, description, type, year, previousName, mediaType))
+        {
+            createOkMessage("Information updated sucessfully!");
+            setStatusBarMessage("Information updated sucessfully! Updated element "+name);
+        }
+        else
+        {
+            createErrorMessage("Error trying to update information");
+            setStatusBarMessage("Error trying to update information! Name: "+name+" - Media Type: "+mediaType);
+        }
     }
     
-    private void seImageInCenterLeftImagePanel(Image image,boolean isGIF)
+    private void deleteInformationOfMedia()
     {
-        ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
-        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
-        _image2Panel.removeAll();
-        _image2Panel.repaint();
-        _image2Panel.add(imageLabeled);
-        _image2Panel.update(_image2Panel.getGraphics());
+        String mediaType = _searchTypeCbb.getSelectedItem().toString();
+        String name = _name.getText();
+        if(MediaManager.deleteMediaInformation(mediaType, name))
+        {
+            deleteInformationOnTree();
+            createOkMessage("Information deleted sucessfully!");
+            clearInformation();
+            setStatusBarMessage("Information deleted sucessfully! Deleted element "+ name);
+        }
+        else
+        {
+            createErrorMessage("Error trying to delete the information.");
+            setStatusBarMessage("Error trying to delete the information... Name: "+name+" - Media Type: "+mediaType);
+        }    
     }
     
-    private void setImageInUpperImagePanel(Image image,boolean isGIF)
+    private void addBasicInformationOfMedia()
     {
-        ImageIcon icon = new ImageIcon (image);  
-        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
-        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
-        _image1Panel.removeAll();
-        _image1Panel.repaint();
-        _image1Panel.add(imageLabeled);
-        _image1Panel.update(_image1Panel.getGraphics());
+        String name = _name.getText();
+        String description = _description.getText();
+        
+        String type = _type.getSelectedItem() != null ? _type.getSelectedItem().toString() : "";
+        int year = _year.getSelectedItem() != null ? Integer.valueOf(_year.getSelectedItem().toString()) : 1901;
+        
+        if(name.equals("") || description.equals("") || type.equals(""))
+        {
+            createErrorMessage("The name, description and type are required to insert media information.");
+            return;
+        }
+        
+        String mediaType = _searchTypeCbb.getSelectedItem().toString();
+        if(MediaManager.insertMediaInformation(name, description, type, year, mediaType))
+        {
+            insertInformationOnTree(name);
+            createOkMessage("Information inserted sucessfully!");
+            clearInformation();
+            setStatusBarMessage("Information inserted sucessfully! Added element "+name);
+        }
+        else
+        {
+            createErrorMessage("Error trying to insert information.");
+            setStatusBarMessage("Error trying to insert information... Name: "+name+" - Media Type: " + mediaType);
+        } 
     }
     
-    private void setIcon()
+    private void updateImageByPosition(ElementTypes eType,byte[] image)
     {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/icon5.png")));
+        String mediaType = _searchTypeCbb.getSelectedItem().toString();
+        String name = "";
+        TreePath path = _searchTree.getSelectionPath();
+        if (path != null)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            name = node.toString();
+        }
+        
+        if(MediaManager.updateImages(mediaType, name, image, eType))
+        {
+            createOkMessage("Image added sucessfully!");
+        }
+        else
+        {
+            createErrorMessage("Error trying to update image");
+        }
     }    
     
+    // </editor-fold>
+    
+    // <editor-fold defaultstate="collapsed" desc="Search Methods">
+    
+    private void createSearchDialogWindow()
+    {
+        String selectedMedia = _searchTypeCbb.getSelectedItem().toString();
+        
+        _dialog = new JDialog(_defaultFrame);
+        _dialog.setTitle("Search media...");
+        _dialog.setSize(new Dimension(300, 500));
+        _dialog.setLocationRelativeTo(_defaultFrame);
+        _dialog.setModal(true);
+        _dialog.setResizable(false);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(null);
+
+        JLabel labelTitle = new JLabel("Search current media : " + selectedMedia);
+        labelTitle.setBounds(10, 5, 260, 20);
+        labelTitle.setSize(260, 20);
+        labelTitle.setVisible(true);
+        panel.add(labelTitle);
+        
+        _searchField = new JTextField();
+        _searchField.setBounds(10, 30, 265, 20);
+        _searchField.setVisible(true);
+        _searchField.addKeyListener(new KeyListener() {
+
+            @Override
+            public void keyTyped(KeyEvent e) {
+                
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String searchCriteria = _searchField.getText();
+                searchMedia(searchCriteria);
+                _tmpList.repaint();
+                _dialog.repaint();
+            }
+        });
+        panel.add(_searchField);
+        
+        _scrollSearchResult = new JScrollPane();
+        _scrollSearchResult.setBounds(10, 55, 265, 370);
+        _scrollSearchResult.setVisible(true);
+        
+        
+        _tmpList = new JList();
+        _tmpList.setVisible(true);
+        _tmpList.setAutoscrolls(true);
+        _tmpList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        _tmpList.addListSelectionListener(new ListSelectionListener() {
+            @Override 
+            public void valueChanged(ListSelectionEvent e) {
+                if(!_tmpList.isSelectionEmpty())
+                {
+                    _btnSearch.setEnabled(true);
+                }
+                else
+                {
+                    _btnSearch.setEnabled(false);
+                }
+            }
+        });
+        
+        MouseListener mouseListener = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent mouseEvent) {
+              JList theList = (JList) mouseEvent.getSource();
+              if (mouseEvent.getClickCount() == 2) {
+                int index = theList.locationToIndex(mouseEvent.getPoint());
+                if (index >= 0) {
+                  Object o = theList.getModel().getElementAt(index);
+                  System.out.println("Double-clicked on: " + o.toString());
+                  TreePath path = findObject(o.toString());
+                  collapseAllTree(_searchTree);
+                  _searchTree.setSelectionPath(path);
+                  _searchTree.scrollPathToVisible(path);
+                  _dialog.dispose();
+                }
+              }
+        }
+        };
+        
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+                switch( keyCode ) { 
+                    case KeyEvent.VK_UP:
+                        System.out.println("UP");
+                        break;
+                    case KeyEvent.VK_DOWN:
+                        System.out.println("DOWN");
+                        break;
+                    case KeyEvent.VK_ENTER:{
+                        JList theList = (JList)e.getSource();
+                        System.out.println(theList.getSelectedValue().toString());
+                        TreePath path = findObject(theList.getSelectedValue().toString());
+                        collapseAllTree(_searchTree);
+                        _searchTree.setSelectionPath(path);
+                        _searchTree.scrollPathToVisible(path);
+                        _dialog.dispose();
+                    }
+                        break;
+                 }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+               
+            }
+        };
+        
+        _tmpList.addKeyListener(keyListener);
+        _tmpList.addMouseListener(mouseListener);
+        _scrollSearchResult.setViewportView(_tmpList);
+        panel.add(_scrollSearchResult);
+        
+        _btnSearch = new JButton("Select");
+        _btnSearch.setBounds(195, 435, 80, 20);
+        _btnSearch.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                // select item from tree
+                if(!_tmpList.isSelectionEmpty())
+                {
+                    String nameSelected = _tmpList.getModel().getElementAt(_tmpList.getSelectedIndex()).toString();
+                    TreePath path = findObject(nameSelected);
+                    collapseAllTree(_searchTree);
+                    _searchTree.setSelectionPath(path);
+                    _searchTree.scrollPathToVisible(path);
+                    _dialog.dispose();
+                }
+            }
+        });
+        _btnSearch.setEnabled(false);
+        panel.add(_btnSearch);
+        
+        _dialog.add(panel);
+        _dialog.repaint();
+        _dialog.setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Search2.png")));
+        
+        _dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        _dialog.setVisible(true);
+        
+    }
+
     private void enableSearchOption()
     {
         String seachBy =  _searchTypeCbb.getSelectedItem().toString();
@@ -980,114 +1398,51 @@ public class MediaManagerUI extends javax.swing.JFrame {
         String selectedMedia = _searchTypeCbb.getSelectedItem().toString();
         String[] tmpList = MediaManager.searchMediaInformation(selectedMedia, criteria);
         _tmpList.setListData(tmpList);
-    }
+    }    
     
-    private String verifySelectionOnLeafNode()
+    private boolean getVideoInformation()
     {
-        TreePath path = _searchTree.getSelectionPath();
-        if (path != null)
+        boolean isVideoAvailable = false;
+        String name = getSelectedNode();
+        String mediaType = _searchTypeCbb.getSelectedItem().toString();
+        if(!name.equals(""))
         {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent( );
-            if (node.isLeaf())
+            Media mediaVideoInformation = MediaManager.getVideoInformation(mediaType, name);
+            if(mediaVideoInformation.constainsVideoData())
             {
-                return node.toString();
-            }
-            else return null;
-        }
-        else return null;
-    }
-    
-    private void setTreeListener(JTree searchTree)
-    {
-        searchTree.addTreeSelectionListener(new TreeSelectionListener(){
-            @Override
-            public void valueChanged(TreeSelectionEvent evt)
-            {
-                clearInformation();
-                
-                _saveInformation.setEnabled(false);
-                _playVideo.setEnabled(false);
-                _addVideo.setEnabled(false);
-                _cleanInformation.setEnabled(false);
-                _deleteInformation.setEnabled(false);
-                
-                String selectedValue = verifySelectionOnLeafNode();
-                if(selectedValue != null)
+                // do something with data
+                try ( 
+                    FileOutputStream fout = new FileOutputStream("video"+mediaVideoInformation.getExtension())) {
+                    fout.flush();
+                    fout.write(mediaVideoInformation.getVideoData());
+                    fout.close();
+                    isVideoAvailable = true;
+                }  
+                catch(FileNotFoundException ex)
                 {
-                    String mediaTypeSelected = _searchTypeCbb.getSelectedItem().toString();
-                    _saveInformation.setEnabled(true);
-                    _playVideo.setEnabled(true);
-                    _addVideo.setEnabled(true);
-                    _cleanInformation.setEnabled(true);
-                    _deleteInformation.setEnabled(true);
-                    setStatusBarMessage(selectedValue + " selected from " + mediaTypeSelected + " list...");   
-
-                    switch(mediaTypeSelected)
-                    {
-                        case "Movies":{
-                            Media media = MediaManager.getMovieInformation(mediaTypeSelected, selectedValue);
-                            printMediaInformation(media,"Movie");
-                        } break;
-                        case "Anime Series":{
-                            Media media = MediaManager.getAnimeSerieInformation(mediaTypeSelected, selectedValue);
-                            printMediaInformation(media,"Anime Serie");
-                        } break;
-                        case "TV Series":{
-                            Media media = MediaManager.getTVSerieInformation(mediaTypeSelected, selectedValue);
-                            printMediaInformation(media,"TV Serie");
-                        } break;
-                        case "Games":{
-                            Media media = MediaManager.getGameInformation(mediaTypeSelected, selectedValue);
-                            printMediaInformation(media,"Game");
-                        } break;
-                        default:{} break;
-                    }
+                    
+                }
+                catch(IOException ioe)
+                {
+                    
                 }
             }
-        });
-    }
-    
-    private void clearInformation()
-    {
-        // do something on changed
-        // remove all values in UI and load new ones if selected node is leaf
-        clearImagesInformation();
-        // remove information
-        _saveInformation.setEnabled(false);
-        _playVideo.setEnabled(false);
-        _deleteInformation.setEnabled(false);
-        _addVideo.setEnabled(false);
-        _name.setText("");
-        _description.setText("");
-        _category.setText("");
-        setStatusBarMessage("");
-    }
-    
-    private void clearImagesInformation()
-    {
-        _image3Panel.removeAll();
-        _image1Panel.removeAll();
-        _image2Panel.removeAll();
-        _image1Panel.repaint();
-        _image2Panel.repaint();
-        _image3Panel.repaint();
-        _image3Panel.update(_image3Panel.getGraphics());
-        _image2Panel.update(_image2Panel.getGraphics());
-        _image1Panel.update(_image1Panel.getGraphics());
-    }
-    
-    private String getSelectedNode()
-    {
-        String name = "";
-        TreePath path = _searchTree.getSelectionPath();
-        if (path != null)
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
-            name = node.toString();
+            else
+            {
+                createOkMessage("Current media doesn't have a video clip to play.");
+            }
         }
-        return name;
-    }
+        else
+        {
+            createOkMessage("No media was selected in order to play video clip.");
+        }
+        return isVideoAvailable;
+    }    
     
+    // </editor-fold> 
+    
+    // <editor-fold defaultstate="collapsed" desc="Set/Show Methods">
+       
     private void printMediaInformation(Media media,String category)
     {
         clearImagesInformation();
@@ -1138,166 +1493,53 @@ public class MediaManagerUI extends javax.swing.JFrame {
         }
     }
     
-    private boolean getVideoInformation()
+    private void setImageInCenterRightImagePanel(Image image,boolean isGIF)
     {
-        boolean isVideoAvailable = false;
-        String name = getSelectedNode();
-        String mediaType = _searchTypeCbb.getSelectedItem().toString();
-        if(!name.equals(""))
-        {
-            Media mediaVideoInformation = MediaManager.getVideoInformation(mediaType, name);
-            if(mediaVideoInformation.constainsVideoData())
-            {
-                // do something with data
-                try ( 
-                    FileOutputStream fout = new FileOutputStream("video"+mediaVideoInformation.getExtension())) {
-                    fout.flush();
-                    fout.write(mediaVideoInformation.getVideoData());
-                    fout.close();
-                    isVideoAvailable = true;
-                }  
-                catch(FileNotFoundException ex)
-                {
-                    
-                }
-                catch(IOException ioe)
-                {
-                    
-                }
-            }
-            else
-            {
-                createOkMessage("Current media doesn't have a video clip to play.");
-            }
-        }
-        else
-        {
-            createOkMessage("No media was selected in order to play video clip.");
-        }
-        return isVideoAvailable;
+        ImageIcon icon = new ImageIcon (image);  
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
+        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
+        _image3Panel.removeAll();
+        _image3Panel.repaint();
+        _image3Panel.add(imageLabeled);
+        _image3Panel.update(_image3Panel.getGraphics());
     }
     
-    private boolean isLeafItemInTreeSelected()
+    private void seImageInCenterLeftImagePanel(Image image,boolean isGIF)
     {
-        TreePath path = _searchTree.getSelectionPath();
-        if (path != null)
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
-            return node.isLeaf();
-        }
-        return false;
+        ImageIcon icon = new ImageIcon (image);  
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
+        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
+        _image2Panel.removeAll();
+        _image2Panel.repaint();
+        _image2Panel.add(imageLabeled);
+        _image2Panel.update(_image2Panel.getGraphics());
     }
     
-    private void updateBasicInformationOfMedia()
+    private void setImageInUpperImagePanel(Image image,boolean isGIF)
     {
-        String name = _name.getText();
-        String description = _description.getText();
-        
-        String type = _type.getSelectedItem() != null ? _type.getSelectedItem().toString() : "";
-        int year = _year.getSelectedItem() != null ? Integer.valueOf(_year.getSelectedItem().toString()) : 1901;
-        
-        String mediaType = _searchTypeCbb.getSelectedItem().toString();
-        String previousName = name;
-        
-        TreePath path = _searchTree.getSelectionPath();
-        if (path != null)
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
-            previousName = node.toString();
-            node.setUserObject(name);
-        }
-        else
-        {
-            createErrorMessage("No media was selected to made an update.");
-            return;
-        }
-        
-        if(MediaManager.updateMediaInformation(name, description, type, year, previousName, mediaType))
-        {
-            createOkMessage("Information updated sucessfully!");
-            setStatusBarMessage("Information updated sucessfully! Updated element "+name);
-        }
-        else
-        {
-            createErrorMessage("Error trying to update information");
-            setStatusBarMessage("Error trying to update information! Name: "+name+" - Media Type: "+mediaType);
-        }
-    }
+        ImageIcon icon = new ImageIcon (image);  
+        ImageIcon scaledImage = InternalGUICreator.getStretchScaledImage(icon, 510, 310, isGIF);
+        JLabel imageLabeled = InternalGUICreator.getLabelPositionedScaledImage(scaledImage,522,340,15,0.9f);
+        _image1Panel.removeAll();
+        _image1Panel.repaint();
+        _image1Panel.add(imageLabeled);
+        _image1Panel.update(_image1Panel.getGraphics());
+    }    
     
-    private void deleteInformationOfMedia()
+    private void setIcon()
     {
-        String mediaType = _searchTypeCbb.getSelectedItem().toString();
-        String name = _name.getText();
-        if(MediaManager.deleteMediaInformation(mediaType, name))
-        {
-            searchMediaBy();
-            createOkMessage("Information deleted sucessfully!");
-            clearInformation();
-            setStatusBarMessage("Information deleted sucessfully! Deleted element "+ name);
-        }
-        else
-        {
-            createErrorMessage("Error trying to delete the information.");
-            setStatusBarMessage("Error trying to delete the information... Name: "+name+" - Media Type: "+mediaType);
-        }    
-    }
+        setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/icon5.png")));
+    }   
     
-    private void addBasicInformationOfMedia()
-    {
-        String name = _name.getText();
-        String description = _description.getText();
-        
-        String type = _type.getSelectedItem() != null ? _type.getSelectedItem().toString() : "";
-        int year = _year.getSelectedItem() != null ? Integer.valueOf(_year.getSelectedItem().toString()) : 1901;
-        
-        if(name.equals("") || description.equals("") || type.equals(""))
-        {
-            createErrorMessage("The name, description and type are required to insert media information.");
-            return;
-        }
-        
-        String mediaType = _searchTypeCbb.getSelectedItem().toString();
-        if(MediaManager.insertMediaInformation(name, description, type, year, mediaType))
-        {
-            searchMediaBy();
-            createOkMessage("Information inserted sucessfully!");
-            clearInformation();
-            setStatusBarMessage("Information inserted sucessfully! Added element "+name);
-        }
-        else
-        {
-            createErrorMessage("Error trying to insert information.");
-            setStatusBarMessage("Error trying to insert information... Name: "+name+" - Media Type: " + mediaType);
-        }
-        
-    }
+    // </editor-fold>   
     
+    // <editor-fold defaultstate="collapsed" desc="Messaging Methods">
+       
     private void setStatusBarMessage(String message)
     {
         _statusBar.setMessage(message);
     }
-    
-    private void updateImageByPosition(ElementTypes eType,byte[] image)
-    {
-        String mediaType = _searchTypeCbb.getSelectedItem().toString();
-        String name = "";
-        TreePath path = _searchTree.getSelectionPath();
-        if (path != null)
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
-            name = node.toString();
-        }
-        
-        if(MediaManager.updateImages(mediaType, name, image, eType))
-        {
-            createOkMessage("Image added sucessfully!");
-        }
-        else
-        {
-            createErrorMessage("Error trying to update image");
-        }
-    }
-    
+
     private void createOkMessage(String message)
     {
         Image imgOk = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/ok2.png"));
@@ -1317,7 +1559,61 @@ public class MediaManagerUI extends javax.swing.JFrame {
         Image imgError = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/error1.png"));
         ImageIcon icon = new ImageIcon(imgError.getScaledInstance(32, 32, Image.SCALE_SMOOTH));
         JOptionPane.showMessageDialog(this,message,"Error",JOptionPane.ERROR_MESSAGE,icon);
+    }    
+    
+    // </editor-fold>    
+    
+    // <editor-fold defaultstate="collapsed" desc="Others Methods">
+
+    private String getTreeCountMsg()
+    {
+        return getNumberOfNodes(_searchTree.getModel()) + " elements were found under " + _searchTypeCbb.getSelectedItem().toString() + " list...";
     }
+    
+    private void showImportOptions()
+    {
+        Image search = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/Search1.png"));
+        Image clear = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/edit-clear.png"));
+        MediaImportUI.getInstance(this,search,clear);
+    }
+    
+    private void showExportOptions()
+    {
+        Image export = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/export.png"));
+        Image folderSearch = Toolkit.getDefaultToolkit().getImage(getClass().getResource("imgs/icons/examples.png"));
+        MediaExportUI.getInstance(this,export,folderSearch);
+    }
+    
+    private void clearInformation()
+    {
+        // do something on changed
+        // remove all values in UI and load new ones if selected node is leaf
+        clearImagesInformation();
+        // remove information
+        _saveInformation.setEnabled(false);
+        _playVideo.setEnabled(false);
+        _deleteInformation.setEnabled(false);
+        _addVideo.setEnabled(false);
+        _name.setText("");
+        _description.setText("");
+        _category.setText("");
+        setStatusBarMessage("");
+    }
+    
+    private void clearImagesInformation()
+    {
+        _image3Panel.removeAll();
+        _image1Panel.removeAll();
+        _image2Panel.removeAll();
+        _image1Panel.repaint();
+        _image2Panel.repaint();
+        _image3Panel.repaint();
+        _image3Panel.update(_image3Panel.getGraphics());
+        _image2Panel.update(_image2Panel.getGraphics());
+        _image1Panel.update(_image1Panel.getGraphics());
+    }    
+    
+    // </editor-fold>    
 
     /**
      * This method is called from within the constructor to initialize the form.
