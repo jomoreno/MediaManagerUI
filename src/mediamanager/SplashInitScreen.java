@@ -4,6 +4,8 @@
  */
 package mediamanager;
 
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
@@ -12,6 +14,7 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.channels.FileLock;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -107,6 +110,35 @@ public class SplashInitScreen {
         }
     }
 
+    private static boolean lockInstance(final String lockFile) 
+    {
+        try {
+            final File file = new File(lockFile);
+            final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+            final FileLock fileLock = randomAccessFile.getChannel().tryLock();
+            if (fileLock != null) {
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    public void run() 
+                    {
+                        try {
+                            fileLock.release();
+                            randomAccessFile.close();
+                            file.delete();
+                        } catch (Exception e) {
+                            System.out.println("Unable to remove lock file: " + lockFile);
+                        }
+                    }
+                });
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Unable to create and/or lock file: " + lockFile);
+        }
+        return false;
+    }
+    
+    private static final String file = "locked.lkd";
+    
     public static void main(String[] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException,
         UnsupportedLookAndFeelException {
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -115,7 +147,10 @@ public class SplashInitScreen {
             @Override
             public void run() {
                 try {
-                    new SplashInitScreen().initUI();
+                    if(lockInstance(file))
+                    {
+                        new SplashInitScreen().initUI();
+                    }
                 } catch (MalformedURLException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
